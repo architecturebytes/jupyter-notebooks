@@ -1,0 +1,582 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "execution_count": 2,
+      "metadata": {
+        "id": "C7Quat9rvPvs"
+      },
+      "outputs": [],
+      "source": [
+        "!apt-get install openjdk-8-jdk-headless -qq > /dev/null\n",
+        "!wget -q http://archive.apache.org/dist/spark/spark-3.1.1/spark-3.1.1-bin-hadoop3.2.tgz\n",
+        "!tar xf spark-3.1.1-bin-hadoop3.2.tgz\n",
+        "!pip install -q findspark"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import os\n",
+        "os.environ[\"JAVA_HOME\"] = \"/usr/lib/jvm/java-8-openjdk-amd64\"\n",
+        "os.environ[\"SPARK_HOME\"] = \"/content/spark-3.1.1-bin-hadoop3.2\""
+      ],
+      "metadata": {
+        "id": "PfmPWVTbw2kK"
+      },
+      "execution_count": 3,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import findspark\n",
+        "findspark.init()\n",
+        "from pyspark.sql import SparkSession\n",
+        "spark = SparkSession.builder.master(\"local[*]\").getOrCreate()\n",
+        "spark.conf.set(\"spark.sql.repl.eagerEval.enabled\", True) # Property used to format output tables better\n",
+        "spark"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 219
+        },
+        "id": "gjUAFB3pxBQ3",
+        "outputId": "e016e3c2-a0e5-4bc0-b129-bc3f526639c0"
+      },
+      "execution_count": 4,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "<pyspark.sql.session.SparkSession at 0x7fe68a5b7670>"
+            ],
+            "text/html": [
+              "\n",
+              "            <div>\n",
+              "                <p><b>SparkSession - in-memory</b></p>\n",
+              "                \n",
+              "        <div>\n",
+              "            <p><b>SparkContext</b></p>\n",
+              "\n",
+              "            <p><a href=\"http://d5e70326f6b6:4040\">Spark UI</a></p>\n",
+              "\n",
+              "            <dl>\n",
+              "              <dt>Version</dt>\n",
+              "                <dd><code>v3.1.1</code></dd>\n",
+              "              <dt>Master</dt>\n",
+              "                <dd><code>local[*]</code></dd>\n",
+              "              <dt>AppName</dt>\n",
+              "                <dd><code>pyspark-shell</code></dd>\n",
+              "            </dl>\n",
+              "        </div>\n",
+              "        \n",
+              "            </div>\n",
+              "        "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 4
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF = spark.read.csv(\"data/retail.csv\", header=True, sep=\",\", inferSchema=True)"
+      ],
+      "metadata": {
+        "id": "iKpmsXA-zdLu"
+      },
+      "execution_count": 5,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF.show()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "w2Ct703IzmMk",
+        "outputId": "d54d0dc2-2c9b-4bd7-db39-7f5bdbde8512"
+      },
+      "execution_count": 6,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "|order_no|order_date|product_id|cust_id|cust_country|order_status|amount|\n",
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "|   A9194|12-06-2021|      P921|   C690|         USA|   DELIVERED|    92|\n",
+            "|   A8191|19-01-2020|      P252|   C519|         USA|    RETURNED|    12|\n",
+            "|   A9177|11-11-2020|      P961|   C652|         USA|   DELIVERED|   192|\n",
+            "|   A9174|18-02-2021|      P777|   C817|         USA|   DELIVERED|    61|\n",
+            "|   A9444|22-06-2021|      P871|   C411|      CANADA|    CANCELED|    94|\n",
+            "|   A9177|11-12-2020|      P961|   C652|         USA|   DELIVERED|   192|\n",
+            "|   A6181|03-11-2022|      P959|   C690|         USA|   DELIVERED|    61|\n",
+            "|   A4227|28-05-2020|      P888|   C642|      CANADA|   DELIVERED|   192|\n",
+            "|   A2283|03-11-2022|      P611|   C642|      CANADA|    CANCELED|    42|\n",
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF.printSchema()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "S74OTVt_zvAu",
+        "outputId": "0f246364-741b-4978-f5ec-ed45a0413a36"
+      },
+      "execution_count": 7,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "root\n",
+            " |-- order_no: string (nullable = true)\n",
+            " |-- order_date: string (nullable = true)\n",
+            " |-- product_id: string (nullable = true)\n",
+            " |-- cust_id: string (nullable = true)\n",
+            " |-- cust_country: string (nullable = true)\n",
+            " |-- order_status: string (nullable = true)\n",
+            " |-- amount: integer (nullable = true)\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from pyspark.sql.functions import to_date \n",
+        "csvDF1 = csvDF.withColumn(\"order_date\",to_date('order_date', 'dd-mm-yyyy')).fillna({'order_date': '2000-01-01'})"
+      ],
+      "metadata": {
+        "id": "K91oCqYWz95-"
+      },
+      "execution_count": 8,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF1.printSchema()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "6Jy4vqJK0HWQ",
+        "outputId": "b59e549d-49f8-444a-e9b6-c88df7fe6f61"
+      },
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "root\n",
+            " |-- order_no: string (nullable = true)\n",
+            " |-- order_date: date (nullable = true)\n",
+            " |-- product_id: string (nullable = true)\n",
+            " |-- cust_id: string (nullable = true)\n",
+            " |-- cust_country: string (nullable = true)\n",
+            " |-- order_status: string (nullable = true)\n",
+            " |-- amount: integer (nullable = true)\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF1.count()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "uKtmdx9H0KHK",
+        "outputId": "9d020a24-0d87-473e-8c55-440127c0ddc0"
+      },
+      "execution_count": 12,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "9"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 12
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF1.show()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "dpT8jyqd1E0P",
+        "outputId": "38007d91-5ff9-4988-847e-21c88a3fd53b"
+      },
+      "execution_count": 13,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "|order_no|order_date|product_id|cust_id|cust_country|order_status|amount|\n",
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "|   A9194|2021-01-12|      P921|   C690|         USA|   DELIVERED|    92|\n",
+            "|   A8191|2020-01-19|      P252|   C519|         USA|    RETURNED|    12|\n",
+            "|   A9177|2020-01-11|      P961|   C652|         USA|   DELIVERED|   192|\n",
+            "|   A9174|2021-01-18|      P777|   C817|         USA|   DELIVERED|    61|\n",
+            "|   A9444|2021-01-22|      P871|   C411|      CANADA|    CANCELED|    94|\n",
+            "|   A9177|2020-01-11|      P961|   C652|         USA|   DELIVERED|   192|\n",
+            "|   A6181|2022-01-03|      P959|   C690|         USA|   DELIVERED|    61|\n",
+            "|   A4227|2020-01-28|      P888|   C642|      CANADA|   DELIVERED|   192|\n",
+            "|   A2283|2022-01-03|      P611|   C642|      CANADA|    CANCELED|    42|\n",
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF2 = csvDF1.dropDuplicates()"
+      ],
+      "metadata": {
+        "id": "cEgPqFDf1HKt"
+      },
+      "execution_count": 14,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF2.count()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "3pnOhcuQ1Ug_",
+        "outputId": "e6743c5a-be6e-4ab3-f4cc-4ce3d4e2a610"
+      },
+      "execution_count": 15,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "8"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 15
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF2.show()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "KPG8-3pY1WcS",
+        "outputId": "51d76109-dc74-4fc2-c6c2-a7795484bf7f"
+      },
+      "execution_count": 16,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "|order_no|order_date|product_id|cust_id|cust_country|order_status|amount|\n",
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "|   A9174|2021-01-18|      P777|   C817|         USA|   DELIVERED|    61|\n",
+            "|   A9444|2021-01-22|      P871|   C411|      CANADA|    CANCELED|    94|\n",
+            "|   A9194|2021-01-12|      P921|   C690|         USA|   DELIVERED|    92|\n",
+            "|   A2283|2022-01-03|      P611|   C642|      CANADA|    CANCELED|    42|\n",
+            "|   A6181|2022-01-03|      P959|   C690|         USA|   DELIVERED|    61|\n",
+            "|   A4227|2020-01-28|      P888|   C642|      CANADA|   DELIVERED|   192|\n",
+            "|   A8191|2020-01-19|      P252|   C519|         USA|    RETURNED|    12|\n",
+            "|   A9177|2020-01-11|      P961|   C652|         USA|   DELIVERED|   192|\n",
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF2.select(\"order_no\",\"order_date\",\"amount\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 227
+        },
+        "id": "nQVUZuDX1Z2-",
+        "outputId": "a08858d4-f02a-425b-eae3-33dd4a115d12"
+      },
+      "execution_count": 17,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "+--------+----------+------+\n",
+              "|order_no|order_date|amount|\n",
+              "+--------+----------+------+\n",
+              "|   A9174|2021-01-18|    61|\n",
+              "|   A9444|2021-01-22|    94|\n",
+              "|   A9194|2021-01-12|    92|\n",
+              "|   A2283|2022-01-03|    42|\n",
+              "|   A6181|2022-01-03|    61|\n",
+              "|   A4227|2020-01-28|   192|\n",
+              "|   A8191|2020-01-19|    12|\n",
+              "|   A9177|2020-01-11|   192|\n",
+              "+--------+----------+------+"
+            ],
+            "text/html": [
+              "<table border='1'>\n",
+              "<tr><th>order_no</th><th>order_date</th><th>amount</th></tr>\n",
+              "<tr><td>A9174</td><td>2021-01-18</td><td>61</td></tr>\n",
+              "<tr><td>A9444</td><td>2021-01-22</td><td>94</td></tr>\n",
+              "<tr><td>A9194</td><td>2021-01-12</td><td>92</td></tr>\n",
+              "<tr><td>A2283</td><td>2022-01-03</td><td>42</td></tr>\n",
+              "<tr><td>A6181</td><td>2022-01-03</td><td>61</td></tr>\n",
+              "<tr><td>A4227</td><td>2020-01-28</td><td>192</td></tr>\n",
+              "<tr><td>A8191</td><td>2020-01-19</td><td>12</td></tr>\n",
+              "<tr><td>A9177</td><td>2020-01-11</td><td>192</td></tr>\n",
+              "</table>\n"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 17
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF2.select(\"order_no\",\"order_date\",\"amount\").where(csvDF2.amount>100)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 89
+        },
+        "id": "JjrdpJFD1__p",
+        "outputId": "e2c38dca-c898-47e7-baf8-623856e871e8"
+      },
+      "execution_count": 18,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "+--------+----------+------+\n",
+              "|order_no|order_date|amount|\n",
+              "+--------+----------+------+\n",
+              "|   A4227|2020-01-28|   192|\n",
+              "|   A9177|2020-01-11|   192|\n",
+              "+--------+----------+------+"
+            ],
+            "text/html": [
+              "<table border='1'>\n",
+              "<tr><th>order_no</th><th>order_date</th><th>amount</th></tr>\n",
+              "<tr><td>A4227</td><td>2020-01-28</td><td>192</td></tr>\n",
+              "<tr><td>A9177</td><td>2020-01-11</td><td>192</td></tr>\n",
+              "</table>\n"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 18
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF2.groupBy(\"cust_country\").agg({'amount':'sum'}).show()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "BY_gybl-2LT6",
+        "outputId": "47a4c227-4a4a-4b5a-c2d3-15a887fe0a67"
+      },
+      "execution_count": 19,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "+------------+-----------+\n",
+            "|cust_country|sum(amount)|\n",
+            "+------------+-----------+\n",
+            "|      CANADA|        328|\n",
+            "|         USA|        418|\n",
+            "+------------+-----------+\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF2.createOrReplaceTempView('orders')"
+      ],
+      "metadata": {
+        "id": "PaSSIVRR2nHs"
+      },
+      "execution_count": 20,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "spark.sql(\"select * from orders\").show()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "l3ejDyrl2t9_",
+        "outputId": "837eac83-82ea-4492-afa5-d3e982927c78"
+      },
+      "execution_count": 21,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "|order_no|order_date|product_id|cust_id|cust_country|order_status|amount|\n",
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "|   A9174|2021-01-18|      P777|   C817|         USA|   DELIVERED|    61|\n",
+            "|   A9444|2021-01-22|      P871|   C411|      CANADA|    CANCELED|    94|\n",
+            "|   A9194|2021-01-12|      P921|   C690|         USA|   DELIVERED|    92|\n",
+            "|   A2283|2022-01-03|      P611|   C642|      CANADA|    CANCELED|    42|\n",
+            "|   A6181|2022-01-03|      P959|   C690|         USA|   DELIVERED|    61|\n",
+            "|   A4227|2020-01-28|      P888|   C642|      CANADA|   DELIVERED|   192|\n",
+            "|   A8191|2020-01-19|      P252|   C519|         USA|    RETURNED|    12|\n",
+            "|   A9177|2020-01-11|      P961|   C652|         USA|   DELIVERED|   192|\n",
+            "+--------+----------+----------+-------+------------+------------+------+\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "spark.sql(\"select cust_country, sum(amount) from orders group by cust_country\").show()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "_833RlRL24DG",
+        "outputId": "b434c6be-9b96-4dd3-ae7b-ed233941c3b6"
+      },
+      "execution_count": 22,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "+------------+-----------+\n",
+            "|cust_country|sum(amount)|\n",
+            "+------------+-----------+\n",
+            "|      CANADA|        328|\n",
+            "|         USA|        418|\n",
+            "+------------+-----------+\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF2.write.csv(\"data/out\")"
+      ],
+      "metadata": {
+        "id": "aAT3-Wsa37U-"
+      },
+      "execution_count": 23,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF3 = csvDF2.repartition(\"cust_country\")"
+      ],
+      "metadata": {
+        "id": "bE-IUe1p4ZXD"
+      },
+      "execution_count": 24,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "csvDF3.write.option(\"header\",False).partitionBy(\"cust_country\").csv(\"data/out1\")"
+      ],
+      "metadata": {
+        "id": "h638BpI_4hnc"
+      },
+      "execution_count": 25,
+      "outputs": []
+    }
+  ]
+}
